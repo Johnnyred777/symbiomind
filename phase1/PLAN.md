@@ -117,3 +117,11 @@ A logistic form, C = 1/(1 + e^(−k(ρ−1))), does behave as described. The pap
    - (e) whether to show the ABN, and the number
 4. **Live data (assumption 1):** OK to have each visitor's browser read Zenodo directly? The alternative is that I refresh a stored copy each time you ask for an edit.
 5. **Method line ("produced with AI collaboration, credited as SHAI / HATI"):** draft it in Phase 2, or strike it now?
+
+## Paper list replaced (29 Oct)
+John supplied a new list of ten, in page order. It replaces the table in section 5 of the brief. It is stored in `site/data/papers.json`.
+- **Published, six with DOIs:** 18501621, 18501041, 18501290, 18629169, 23191148, 23355456. None is checked yet, because Zenodo is still blocked here.
+- **In development, four with no links:** Sixteen Registers, Jeopardy Architecture, HSAI, and the HATI² discriminator.
+- **Possible conflict:** the Zenodo listing (SIP_Ledger_2) shows HATI²-01 as record 20621906, Open. The hard-state ledger says "draft reserved, not published".
+- **Not used:** the dates, licences and "why it's here" notes in the list. Cards read dates and licences live from Zenodo, and the summaries will be drafted from each abstract.
+- **Filter chips (proposed):** AI safety · Physics · Quantum · Technology · Method.

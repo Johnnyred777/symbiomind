@@ -1,0 +1,24 @@
+{
+  "_about": "One entry per paper, in page order. Title, date, version, licence, resource type and credits are read live from Zenodo using the DOI, never typed here. 'summary' is a plain-language line for John's approval. Entries with status 'in-development' have no DOI and no link.",
+  "zenodo_community": "https://zenodo.org/communities/symbiomind-sovereign",
+  "papers": [
+    { "doi": "10.5281/zenodo.18501621", "status": "published", "domain": "AI safety",
+      "summary": "[TO CONFIRM: draft from Zenodo abstract]", "verified": false },
+    { "doi": "10.5281/zenodo.18501041", "status": "published", "domain": "Physics",
+      "summary": "[TO CONFIRM: draft from Zenodo abstract]", "verified": false },
+    { "doi": "10.5281/zenodo.18501290", "status": "published", "domain": "Quantum",
+      "summary": "[TO CONFIRM: draft from Zenodo abstract]", "verified": false },
+    { "doi": "10.5281/zenodo.18629169", "status": "published", "domain": "Quantum",
+      "summary": "[TO CONFIRM: draft from Zenodo abstract]", "verified": false },
+    { "doi": "10.5281/zenodo.23191148", "status": "published", "domain": "Technology",
+      "summary": "[TO CONFIRM: draft from Zenodo abstract]", "verified": false },
+    { "doi": "10.5281/zenodo.23355456", "status": "published", "domain": "Method",
+      "summary": "[TO CONFIRM: draft from Zenodo abstract]", "verified": false },
+
+    { "doi": null, "status": "in-development", "label": "Sixteen Registers and the consciousness series", "domain": "Consciousness" },
+    { "doi": null, "status": "in-development", "label": "Jeopardy Architecture", "domain": "AI" },
+    { "doi": null, "status": "in-development", "label": "Humanistic Super AI (HSAI) foundation paper", "domain": "AI" },
+    { "doi": null, "status": "in-development", "label": "HATI² cycle-integrity discriminator (SIP-PREREG-HATI²-01)", "domain": "Method",
+      "note": "Your Zenodo listing shows record 20621906 as Open (uploaded 13 June 2026, v2). It may already have a live DOI. TO CONFIRM." }
+  ]
+}
