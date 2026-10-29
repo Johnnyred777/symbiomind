@@ -30,7 +30,41 @@ The current index.html (the purple site) stays as it is until launch.
 4. **Scenes** are Canvas 2D, with no WebGL and no 3D.
 5. **Papers on the "needs John" list** (a DOI that fails or a title that doesn't match) stay off the page.
 
-## Scene pairing (proposed)
+## Update after reading your two ledger files (29 Oct)
+The Zenodo listing (SIP_Ledger_2) shows that **your later published work replaced the ρ = 1 "tipping point"**:
+- **SIP-PREREG-01** (record 20454447) "reverses the original collapse-threshold framing". ρ is now a timescale ratio, **ρ = τ_σ/τ_R**, and ρ = 1 is "the timescale balance point only".
+- **Record 21126607** (June 2026) is a pre-registered negative result. It says ρ = 1 "is not a fundamental, substrate-general law".
+- **SIP-PREREG-02** (record 20522330) **confirmed** a smooth law in simulation: Var = σ_q²τ_σ²/(ρ(ρ+1)). The predicted ratio of 3.0 fell inside the 95% CI [2.941, 3.033].
+
+So the original Garden and Life cycle drafts below, where fireflies "go dark at ρ = 1", would show a claim your own record has retired. **I recommend against them.**
+
+### Revised Garden proposal: the confirmed variance law (a real, pre-registered rule)
+- **What each firefly stands for:** a regulated system holding its place against random pushes. Its jitter follows the confirmed law exactly.
+- **Worked example,** using the calibration from SIP-PREREG-02 (the size of the wobble, its SD, is 0.15 when ρ = 1):
+
+| ρ | Wobble (SD) | What you see |
+|---|---|---|
+| 3 | 0.061 | fireflies hold almost still |
+| 2 | 0.087 | gentle hover |
+| 1 | 0.150 | three times the variance of ρ = 2 |
+| 0.5 | 0.245 | wide, restless wandering |
+
+  The wobble rises smoothly as ρ falls, with no cliff at 1. That is the result.
+- **Caption:** "confirmed in simulation; not yet tested on real-world data". This is the "transfer debt" your record names.
+- **Link:** SIP-PREREG-02.
+
+### Life cycle and Cosmos
+- These can still show CDR and the two-ring CRS idea. However, neither has a confirmed rule, so both captions say **"illustration"**.
+- Neither scene shows a tipping point at ρ = 1.
+
+### Other things the ledgers turned up
+- **Zenodo community:** https://zenodo.org/communities/symbiomind-sovereign ("SymbioMind: Sovereign Research & HATI Consensus").
+- **Hubble Tension (slot 6):** the hard-state ledger lists **SIP-07 v3.1, DOI 10.5281/zenodo.19702873, "evidence update live"**. The brief uses 19199740. Which should the card link to?
+- **Programme name:** recent records use "Recoherence Systems (RS), historically GTRS" and "General Theory of Recoherence Systems". Which name should the site use?
+- **Credits:** they vary by record ("SHAI / HATI", "SHAI / HATI2", "SHAI / HATI3"). Cards will copy each record exactly, as the brief says.
+- **Checking the ten papers:** none of the ten brief papers appear in this listing, so their details still need checking live on Zenodo.
+
+## Earlier proposal (based on SIP-CORE-03; superseded where it uses ρ = 1 as a threshold)
 **Source used:** SIP-CORE-03 "GTRS Foundations" v2.0, found in your Google Drive. Its section 4 and Appendix A summarise the equations "from SIP-CORE-01 and SIP-CORE-02". I have **not** read SIP-CORE-01 or SIP-CORE-02 themselves: they are not in your Drive, and Zenodo is blocked here. Each scene will link to SIP-CORE-01 or SIP-CORE-02, the public papers, not to SIP-CORE-03.
 
 ### Corrections to the working summary in the brief
