@@ -30,18 +30,52 @@ The current index.html (the purple site) stays as it is until launch.
 4. **Scenes** are Canvas 2D, with no WebGL and no 3D.
 5. **Papers on the "needs John" list** (a DOI that fails or a title that doesn't match) stay off the page.
 
-## Scene pairing: WAITING ON THE PAPERS
-Your working summary, which I have not checked:
-- Garden = ρ = R/σ
-- Life cycle = cycle C
-- Cosmos = GTRS stability threshold
+## Scene pairing (proposed)
+**Source used:** SIP-CORE-03 "GTRS Foundations" v2.0, found in your Google Drive. Its section 4 and Appendix A summarise the equations "from SIP-CORE-01 and SIP-CORE-02". I have **not** read SIP-CORE-01 or SIP-CORE-02 themselves: they are not in your Drive, and Zenodo is blocked here. Each scene will link to SIP-CORE-01 or SIP-CORE-02, the public papers, not to SIP-CORE-03.
 
-I will not confirm the pairing, or give worked examples with numbers, until I have read SIP-CORE-01 and Mathematical Core v2.2.
+### Corrections to the working summary in the brief
+| Brief said | Source says |
+|---|---|
+| ρ = R/σ, "resistance relative to noise" | ρ = R/σ, **regulatory capacity** relative to **stressor load** |
+| "cycle C" | **C** is the *coherence function* C = [ρ/(1+ρ)]^k. The cycle is **CDR** |
+| "condensation, dispersion, recoherence" | **Coherence, Decoherence, Recoherence** |
+| "GTRS stability threshold" | Two thresholds: the phase boundary **ρ ≈ 1**, and **α**, the lowest ρ at which a system can stay coherent |
+
+### 1. Garden (Homeostasis): ρ = R/σ and C = [ρ/(1+ρ)]^k, with k = 2
+- **Worked example:** the garden has regulatory capacity R = 3.
+  - Light stress, σ = 1.5: ρ = 2, C = 0.44. Fireflies glow steadily.
+  - Stress rises to σ = 3: ρ = 1, the phase boundary, C = 0.25. Fireflies dim and flicker.
+  - At σ = 6: ρ = 0.5, C = 0.11. Most go dark.
+- **What each firefly stands for:** one part of the garden. Its brightness is C.
+- **Visitor control:** one slider for stressor load σ.
+
+### 2. Life cycle (CDR): dρ/dt = −γ(ρ − ρ*) + noise
+- **What each firefly stands for:** one system. Its ρ drifts toward a target ρ* at rate γ, with random jostling.
+- **Worked example,** with γ = 0.5 and the noise left out so the numbers are clear:
+  - **Decoherence:** stress drops the target from ρ* = 2 to 0.8. ρ goes from 2 to 1.53, then 1.24, then 0.96 at times 1, 2 and 4. It crosses the boundary just before time 4.
+  - **Recoherence:** an intervention raises R, and the target returns to 2. From 0.8, ρ goes to 1.27, then 1.56, then 1.84.
+  - The paper's point is that recovery needs this active push. Stress simply easing off is not enough.
+- **Visitor buttons:** "Add stress" and "Intervene".
+
+### 3. Cosmos (attractor navigation): the CRS double well
+- **What it shows:** two resting places.
+  - A deep, genuine one at ρ* ≈ 2.0.
+  - A shallow "captured" one at ρ* ≈ 1.3.
+  - A ridge between them at ρ ≈ 1.6.
+- **What it looks like:** these become two orbit rings, the idea you liked from reference 1.
+- **Worked example:** two fireflies both sit at a healthy-looking ρ above 1. The same nudge hits both. The one in the deep ring settles back. The one in the shallow ring is knocked over the ridge and falls.
+- **The source's own wording:** it calls this "the strongest novel prediction" of GTRS.
+- **Gap:** the source gives the well positions but **not the depths**. Unless SIP-CORE-02 gives them, the caption must say "illustration".
+
+### Problem found in the maths: please check
+SIP-CORE-03 §8.2 says high k (6 to 10) "maintains C ≈ 1 until ρ ≈ 1", then collapses suddenly. The formula as written does not do that. With k = 8, a healthy ρ = 2 gives C = 0.04, nearly dark. A high k dims everything; it does not create a cliff at ρ = 1.
+
+A logistic form, C = 1/(1 + e^(−k(ρ−1))), does behave as described. The paper itself lists it as an alternative. Until you decide, the Garden scene uses k = 2, which is the paper's original value.
 
 ## Questions (five at most)
-1. **Papers:** allow zenodo.org and doi.org in this session's network settings, or attach the two PDFs. This is the only thing blocking the scene pairing.
+1. **Papers and pairing:** do you approve the pairing above, sourced from SIP-CORE-03? And on the k problem, should I keep k = 2 or use the logistic form? The PDFs of SIP-CORE-01 and SIP-CORE-02, or allowing zenodo.org, would still let me check against the originals and get the Cosmos well depths.
 2. **Filter chips:** proposed domain tags are *Core mathematics · Health · Land and animals · Physics · AI*. Example: Physics holds Quantum and Cosmology. AI holds Sovereign AI Hub, both AI safety papers and Edge AI. OK?
-3. **Footer:** please give, or say "leave out":
+3. **Footer:** your papers already show "Toormina, NSW, Australia", "symbiomind@proton.me" and "CC BY-NC-SA 4.0". I won't use any of them until you confirm. Please give, or say "leave out":
    - (a) the Zenodo community URL
    - (b) the email address
    - (c) the licence line
