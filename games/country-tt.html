@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Country TT</title>
+  <style>
+    * { box-sizing:border-box; }
+    html, body {
+      margin:0; width:100%; height:100%;
+      background:#0f1720; overflow:hidden;
+      font-family:system-ui, sans-serif;
+      touch-action:none;
+    }
+    canvas {
+      display:block;
+      width:100vw;
+      height:100vh;
+      object-fit:contain;
+      background:#0f1720;
+    }
+    #ui {
+      position:fixed; left:16px; top:16px;
+      background:rgba(0,0,0,.6);
+      color:#fff; padding:14px 18px; border-radius:10px;
+      font-size:14px; line-height:1.6;
+      user-select:none; pointer-events:none;
+      box-shadow:0 4px 6px rgba(0,0,0,0.3);
+      border:1px solid rgba(255,255,255,0.1);
+      font-variant-numeric:tabular-nums;
+    }
+    #ui b { color:#ffe38a; }
+    .overlay {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%, -50%);
+      text-align:center; user-select:none; pointer-events:none;
+      text-shadow:2px 2px 4px rgba(0,0,0,0.8);
+    }
+    #crash-alert { color:#ff4a4a; font-size:48px; font-weight:bold; display:none; }
+    #start {
+      color:#fff; font-size:18px; line-height:1.6;
+      background:rgba(0,0,0,.55); padding:24px 32px; border-radius:12px;
+    }
+    #start h1 { margin:0 0 8px; font-size:40px; color:#ffe38a; }
+    #touch { position:fixed; inset:0; display:none; pointer-events:none; }
+    #touch div {
+      position:absolute; bottom:24px; width:76px; height:76px; border-radius:50%;
+      background:rgba(255,255,255,.18); border:2px solid rgba(255,255,255,.4);
+      color:#fff; font-size:28px; display:flex; align-items:center; justify-content:center;
+      pointer-events:auto; user-select:none;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div><b>Speed</b> <span id="speed">0</span> km/h</div>
+    <div><b>Lap</b> <span id="lap">1</span></div>
+    <div><b>Time</b> <span id="time">0.0</span>s</div>
+    <div><b>Best lap</b> <span id="best">--</span></div>
+  </div>
+  <div id="crash-alert" class="overlay">CRASHED!</div>
+  <div id="start" class="overlay">
+    <h1>Country TT</h1>
+    <div>W / &uarr; throttle &nbsp;·&nbsp; S / &darr; brake &nbsp;·&nbsp; A D / &larr; &rarr; steer</div>
+    <div>Lean into the bends. Hit a tree, a house or a bridge wall and you're down.</div>
+    <div style="margin-top:10px;color:#ffe38a">Press any key or tap to ride</div>
+  </div>
+  <div id="touch">
+    <div data-key="arrowleft"  style="left:24px">&larr;</div>
+    <div data-key="arrowright" style="left:116px">&rarr;</div>
+    <div data-key="arrowdown"  style="right:116px">&#9632;</div>
+    <div data-key="arrowup"    style="right:24px">&uarr;</div>
+  </div>
+  <canvas id="game" width="960" height="540"></canvas>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const HORIZON = H * 0.4;
+
+    const speedEl = document.getElementById('speed');
+    const lapEl = document.getElementById('lap');
+    const timeEl = document.getElementById('time');
+    const bestEl = document.getElementById('best');
+    const crashAlert = document.getElementById('crash-alert');
+    const startEl = document.getElementById('start');
+
+    const keys = {};
+    const TAU = Math.PI * 2;
+
+    // ---- Track -----------------------------------------------------------
+    // The track is a closed loop. Every feature uses a whole number of cycles
+    // per lap so the road joins up seamlessly at the start/finish line.
+    const trackLen = 6000;
+    const SEG = 10;                       // distance units per segment
+    const samples = trackLen / SEG;       // 600 segments
+    const ROAD_HALF = 160;                // half road width (world units)
+
+    const wave = (t, cycles) => Math.sin(TAU * cycles * t / trackLen);
+    const curveAt = t => wave(t, 3) * 200 + wave(t, 7) * 100;   // lateral centreline
+    const hillAt  = t => wave(t, 14) * 40;                         // elevation
+    const curveSlope = t =>                                         // d(curve)/dt
+      (TAU / trackLen) * (200 * 3 * Math.cos(TAU * 3 * t / trackLen) +
+                          100 * 7 * Math.cos(TAU * 7 * t / trackLen));
+
+    const track = [];
+    for (let i = 0; i < samples; i++) {
+      const t = i * SEG;
+      const bridge = Math.abs(Math.sin(TAU * 12 * t / trackLen + 0.7)) > 0.97;
+      const village = !bridge && ((wave(t, 15) > 0.6 && Math.abs(wave(t, 54)) > 0.3) || (i % 85 === 0));
+      const tree = !bridge && !village && ((Math.sin(TAU * 38 * t / trackLen + 2.5) > 0.65) || (i % 41 === 0));
+      // Deterministic side for scenery: -1 left, 1 right, 2 both
+      const r = Math.sin(i * 12.9898) * 43758.5453;
+      const frac = r - Math.floor(r);
+      const side = frac < 0.4 ? -1 : frac < 0.8 ? 1 : 2;
+      track.push({ bridge, village, tree, side });
+    }
+
+    const wrap = d => ((d % trackLen) + trackLen) % trackLen;
+    function sampleTrack(dist){
+      return track[Math.floor(wrap(dist) / SEG) % samples];
+    }
+
+    // ---- State -----------------------------------------------------------
+    const state = {
+      started: false,
+      distance: 0,
+      speed: 0,
+      x: 0,          // lateral offset from road centre (world units)
+      lean: 0,
+      lap: 1,
+      time: 0,
+      lapStart: 0,
+      best: null,
+      crashed: false,
+      crashTimer: 0,
+      spinAngle: 0
+    };
+
+    function start(){
+      if (state.started) return;
+      state.started = true;
+      startEl.style.display = 'none';
+    }
+
+    window.addEventListener('keydown', e => {
+      const k = e.key.toLowerCase();
+      keys[k] = true;
+      if (k.startsWith('arrow') || k === ' ') e.preventDefault();
+      start();
+    });
+    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+    window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+    // Touch controls
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      document.getElementById('touch').style.display = 'block';
+      document.querySelectorAll('#touch div').forEach(btn => {
+        const k = btn.dataset.key;
+        btn.addEventListener('pointerdown', e => { e.preventDefault(); keys[k] = true; start(); });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>
+          btn.addEventListener(ev, () => keys[k] = false));
+      });
+    }
+    canvas.addEventListener('pointerdown', start);
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const input = () => ({
+      throttle: keys['w'] || keys['arrowup'],
+      brake: keys['s'] || keys['arrowdown'],
+      steer: ((keys['d'] || keys['arrowright']) ? 1 : 0) - ((keys['a'] || keys['arrowleft']) ? 1 : 0)
+    });
+
+    function crash(){
+      state.crashed = true;
+      state.crashTimer = 1.5;
+      state.spinAngle = 0;
+      crashAlert.style.display = 'block';
+    }
+
+    // ---- Update ----------------------------------------------------------
+    function update(dt){
+      if (!state.started) return;
+
+      if (state.crashed) {
+        state.crashTimer -= dt;
+        state.spinAngle += dt * 15;
+        state.speed = Math.max(0, state.speed - 300 * dt);
+        state.x += Math.sin(state.spinAngle) * 5 * dt;
+
+        if (state.crashTimer <= 0) {
+          state.crashed = false;
+          state.x = 0;
+          state.lean = 0;
+          crashAlert.style.display = 'none';
+        }
+      } else {
+        const { throttle, brake, steer } = input();
+
+        state.speed += (throttle ? 35 : 0) * dt;
+        state.speed -= (brake ? 55 : 0) * dt;
+        state.speed -= state.speed * 0.13 * dt;    // natural drag
+        state.speed = clamp(state.speed, 0, 230);
+
+        // Steering: authority grows with speed
+        state.x += steer * (state.speed * 1.1 + 20) * dt;
+
+        // Centrifugal drift on bends, proportional to speed squared
+        const slope = curveSlope(state.distance);
+        state.x -= slope * state.speed * state.speed * 3.5e-3 * dt;
+        state.x = clamp(state.x, -260, 260);
+
+        state.lean += ((steer * 0.45) - state.lean) * Math.min(1, dt * 8);
+
+        const seg = sampleTrack(state.distance);
+        const off = Math.abs(state.x);
+        if (off > ROAD_HALF) {
+          if (seg.bridge && off > ROAD_HALF * 1.1 && state.speed > 20) {
+            crash();                                 // bridge parapet
+          } else {
+            state.speed *= Math.pow(0.94, dt * 60);   // grass drag
+            const sideHit = seg.side === 2 || seg.side === Math.sign(state.x);
+            if (off > 200 && state.speed > 40 && (seg.tree || seg.village) && sideHit) crash();
+          }
+        }
+      }
+
+      state.distance += state.speed * dt * 1.5;
+      state.time += dt;
+
+      if (state.distance >= trackLen){
+        state.distance -= trackLen;
+        const lapTime = state.time - state.lapStart;
+        if (state.best === null || lapTime < state.best) state.best = lapTime;
+        state.lapStart = state.time;
+        state.lap += 1;
+      }
+
+      speedEl.textContent = Math.round(state.speed);
+      lapEl.textContent = state.lap;
+      timeEl.textContent = (state.time - state.lapStart).toFixed(1);
+      bestEl.textContent = state.best === null ? '--' : state.best.toFixed(1) + 's';
+    }
+
+    // ---- Projection ------------------------------------------------------
+    // Classic pseudo-3D: a point z units ahead projects with scale F / z.
+    const Z_NEAR = 20;
+    const F = 52;
+    const CAM_H = (H - HORIZON) * Z_NEAR / F;   // camera height so z = Z_NEAR hits the screen bottom
+    const PX = 2.6 * Z_NEAR / F;                 // world -> pixel scale factor
+    const DRAW_SEGS = 140;
+
+    function project(ahead){
+      const d = state.distance + ahead;
+      const z = ahead + Z_NEAR;
+      const sc = F / z;
+      const camCurve = curveAt(state.distance);
+      const camHill = hillAt(state.distance);
+      const cx = W / 2 + ((curveAt(d) - camCurve) * 3 - state.x) * sc * PX * 1.05;
+      const y = HORIZON + (CAM_H - (hillAt(d) - camHill)) * sc;
+      return { d, sc, cx, y, half: ROAD_HALF * sc * PX * 1.05, seg: sampleTrack(d) };
+    }
+
+    // ---- Drawing ---------------------------------------------------------
+    function drawBackground(){
+      const sky = ctx.createLinearGradient(0, 0, 0, HORIZON);
+      sky.addColorStop(0, '#75beff');
+      sky.addColorStop(1, '#d0f0ff');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, HORIZON);
+
+      ctx.fillStyle = '#ffe6a8';
+      ctx.beginPath();
+      ctx.arc(W * 0.78, HORIZON * 0.35, 34, 0, TAU);
+      ctx.fill();
+
+      // Parallax mountains shift with the bends ahead
+      const offset = ((curveAt(state.distance) * 0.8 + state.x * 0.1) % W + W) % W;
+      const layers = [['#9db39a', 0.6, 50], ['#7e967c', 1, 80]];
+      for (const [col, k, hgt] of layers) {
+        ctx.fillStyle = col;
+        const o = (offset * k) % W;
+        for (let m = -1; m < 2; m++) {
+          const b = m * W - o;
+          ctx.beginPath();
+          ctx.moveTo(b, HORIZON);
+          ctx.lineTo(b + W * 0.2, HORIZON - hgt * 0.75);
+          ctx.lineTo(b + W * 0.4, HORIZON - hgt * 0.4);
+          ctx.lineTo(b + W * 0.6, HORIZON - hgt);
+          ctx.lineTo(b + W * 0.8, HORIZON - hgt * 0.5);
+          ctx.lineTo(b + W, HORIZON);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      ctx.fillStyle = '#6fa352';
+      ctx.fillRect(0, HORIZON, W, H - HORIZON);
+    }
+
+    function drawRoad(projs){
+      for (let i = projs.length - 1; i > 0; i--){
+        const n = projs[i - 1];   // nearer edge
+        const f = projs[i];       // farther edge
+        if (n.y <= f.y) continue; // hidden behind a crest
+
+        const stripe = Math.floor(n.d / 15) % 2 === 0;
+        // Grass bands
+        ctx.fillStyle = Math.floor(n.d / 40) % 2 === 0 ? '#6fa352' : '#67994b';
+        ctx.fillRect(0, f.y, W, n.y - f.y + 1);
+
+        const quad = (nx, nw, fx, fw, col) => {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.moveTo(nx - nw, n.y);
+          ctx.lineTo(nx + nw, n.y);
+          ctx.lineTo(fx + fw, f.y - 0.5);
+          ctx.lineTo(fx - fw, f.y - 0.5);
+          ctx.closePath();
+          ctx.fill();
+        };
+
+        if (n.seg.bridge) {
+          // Stone parapets and river beneath
+          quad(n.cx, n.half * 1.6, f.cx, f.half * 1.6, '#3f7fb5');
+          quad(n.cx, n.half * 1.12, f.cx, f.half * 1.12, '#8f8a7e');
+          quad(n.cx, n.half, f.cx, f.half, '#94794e');
+        } else {
+          // Rumble strips
+          quad(n.cx, n.half * 1.06, f.cx, f.half * 1.06, stripe ? '#ff4747' : '#ffffff');
+          quad(n.cx, n.half, f.cx, f.half, '#383838');
+          // Centre line
+          if (Math.floor(n.d / 25) % 2 === 0) {
+            quad(n.cx, n.half * 0.015, f.cx, f.half * 0.015, '#ffffff');
+          }
+        }
+      }
+    }
+
+    function drawSprite(p, kind, side){
+      const scale = p.sc * 3.2;
+      if (scale < 0.08) return;
+      const x = p.cx + side * (p.half + 55 * scale);
+      const y = p.y;
+      if (kind === 'village') {
+        const w = 60 * scale, h = 52 * scale;
+        ctx.fillStyle = '#ebdcb2';
+        ctx.fillRect(x - w / 2, y - h, w, h);
+        ctx.fillStyle = '#b54724';
+        ctx.beginPath();
+        ctx.moveTo(x - w / 2 - 4 * scale, y - h);
+        ctx.lineTo(x, y - h - 30 * scale);
+        ctx.lineTo(x + w / 2 + 4 * scale, y - h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#4a6b8a';
+        ctx.fillRect(x - w * 0.3, y - h * 0.7, w * 0.18, h * 0.22);
+        ctx.fillRect(x + w * 0.12, y - h * 0.7, w * 0.18, h * 0.22);
+        ctx.fillStyle = '#6b4226';
+        ctx.fillRect(x - w * 0.08, y - h * 0.4, w * 0.16, h * 0.4);
+      } else {
+        const trunkW = 10 * scale, trunkH = 34 * scale;
+        ctx.fillStyle = '#5c4326';
+        ctx.fillRect(x - trunkW / 2, y - trunkH, trunkW, trunkH);
+        ctx.fillStyle = '#236e39';
+        ctx.beginPath();
+        ctx.arc(x, y - trunkH - 20 * scale, 30 * scale, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = '#2d8546';
+        ctx.beginPath();
+        ctx.arc(x - 8 * scale, y - trunkH - 28 * scale, 16 * scale, 0, TAU);
+        ctx.fill();
+      }
+    }
+
+    function drawScenery(projs){
+      for (let i = projs.length - 1; i >= 0; i--){
+        const p = projs[i];
+        const s = p.seg;
+        if (!s.village && !s.tree) continue;
+        const idx = Math.floor(wrap(p.d) / SEG);
+        if (idx % (s.village ? 4 : 2) !== 0) continue;   // space buildings/trees out
+        // Only draw once per segment (projections are per segment boundary)
+        const kind = s.village ? 'village' : 'tree';
+        if (s.side === 2) { drawSprite(p, kind, -1); drawSprite(p, kind, 1); }
+        else drawSprite(p, kind, s.side);
+      }
+    }
+
+    function drawBike(){
+      const bikeX = W / 2;
+      const bikeY = H * 0.9;
+      const lean = state.crashed ? state.spinAngle : state.lean;
+
+      ctx.save();
+      ctx.translate(bikeX, bikeY);
+      ctx.rotate(lean);
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 34, 8, 0, 0, TAU);
+      ctx.fill();
+
+      // Rear tyre
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(-9, -26, 18, 30);
+      // Bodywork
+      ctx.fillStyle = '#ea3c3c';
+      ctx.beginPath();
+      ctx.moveTo(-24, -24);
+      ctx.lineTo(24, -24);
+      ctx.lineTo(18, -54);
+      ctx.lineTo(-18, -54);
+      ctx.closePath();
+      ctx.fill();
+      // Tail light
+      ctx.fillStyle = state.crashed || input().brake ? '#ff2020' : '#7a1010';
+      ctx.fillRect(-8, -32, 16, 5);
+      // Exhausts
+      ctx.fillStyle = '#9aa0a6';
+      ctx.fillRect(-30, -22, 9, 14);
+      ctx.fillRect(21, -22, 9, 14);
+      // Rider: back, helmet
+      ctx.fillStyle = '#1f3c88';
+      ctx.beginPath();
+      ctx.ellipse(0, -66, 22, 18, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-4, -82, 8, 28);
+      ctx.fillStyle = '#ffe38a';
+      ctx.beginPath();
+      ctx.arc(0, -90, 13, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(-13, -92, 26, 4);
+      // Race number
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('7', 0, -40);
+
+      ctx.restore();
+    }
+
+    function render(){
+      drawBackground();
+      const projs = [];
+      const base = state.distance % SEG;
+      for (let i = 0; i <= DRAW_SEGS; i++) projs.push(project(i * SEG - base));
+      drawRoad(projs);
+      drawScenery(projs);
+      drawBike();
+    }
+
+    // ---- Main loop -------------------------------------------------------
+    let last = performance.now();
+    function frame(now){
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      update(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
